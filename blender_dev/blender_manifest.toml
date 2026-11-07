@@ -1,0 +1,14 @@
+schema_version = "1.2.0"
+
+id = "blender_dev"
+version = "0.0.1"
+name = "blender_dev"
+tagline = "blender_dev"
+maintainer = "sinuhe.dev@gmail.com"
+type = "add-on"
+
+blender_version_min = "5.2.0"
+
+license = ["SPDX:MIT"]
+
+copyright = ["Copyright (c) 2026 Sinuhe Maceda https://sinuhe.dev"]
