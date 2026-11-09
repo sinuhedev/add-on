@@ -7,15 +7,13 @@ const vscode = require('vscode')
 const CONFIG = {
   color: 'yellow',
   showRuler: true,
+  debounceMs: 40,
+  // Archivos mas grandes (en caracteres) no se analizan
+  maxChars: 1000000,
   languages: new Set([
     'html',
     'xml',
     'xsl',
-    'vue',
-    'svelte',
-    'php',
-    'handlebars',
-    'razor',
     'javascript',
     'javascriptreact',
     'typescriptreact'
@@ -46,11 +44,12 @@ const TAG_RE =
   /<!--[\s\S]*?-->|<\/([A-Za-z][\w.:-]*)\s*>|<([A-Za-z][\w.:-]*)((?:"[^"]*"|'[^']*'|\{(?:[^{}]|\{[^{}]*\})*\}|=>|[^>"'])*?)(\/?)>/g
 
 /**
- * Devuelve la lista de pares { open, close } con los offsets de cada etiqueta.
- * Cada etiqueta: { start, end, nameStart, nameEnd }
+ * Devuelve todas las etiquetas en orden de aparicion (ya ordenadas por `start`).
+ * Cada una: { start, end, nameStart, nameEnd, other }
+ * `other` es la etiqueta pareja (apertura <-> cierre) o null si no tiene.
  */
 function parseTags(text) {
-  const pairs = []
+  const tags = []
   const stack = []
   TAG_RE.lastIndex = 0
 
@@ -60,96 +59,127 @@ function parseTags(text) {
     const end = start + m[0].length
 
     if (m[1] !== undefined) {
-      // Cierre: busca la apertura mas cercana con el mismo nombre
       const name = m[1]
+      const close = {
+        start,
+        end,
+        nameStart: start + 2,
+        nameEnd: start + 2 + name.length,
+        other: null
+      }
+      tags.push(close)
+
+      // Busca la apertura mas cercana con el mismo nombre
       for (let i = stack.length - 1; i >= 0; i--) {
         if (stack[i].name === name) {
-          const close = {
-            start,
-            end,
-            nameStart: start + 2,
-            nameEnd: start + 2 + name.length
-          }
-          pairs.push({ open: stack[i].tag, close })
+          close.other = stack[i].tag
+          stack[i].tag.other = close
           stack.length = i // descarta las abiertas sin cerrar que quedaron encima
           break
         }
       }
     } else if (m[2] !== undefined) {
       const name = m[2]
-      const selfClosing = m[4] === '/'
-      if (selfClosing || CONFIG.emptyElements.has(name.toLowerCase())) continue
-      stack.push({
-        name,
-        tag: {
-          start,
-          end,
-          nameStart: start + 1,
-          nameEnd: start + 1 + name.length
-        }
-      })
+      if (m[4] === '/' || CONFIG.emptyElements.has(name.toLowerCase())) continue
+
+      const open = {
+        start,
+        end,
+        nameStart: start + 1,
+        nameEnd: start + 1 + name.length,
+        other: null
+      }
+      tags.push(open)
+      stack.push({ name, tag: open })
     }
   }
-  return pairs
+  return tags
 }
 
-// Par mas interno cuya apertura o cierre contiene el offset
-function findPair(pairs, offset) {
-  let best
-  for (const pair of pairs) {
-    for (const tag of [pair.open, pair.close]) {
-      if (
-        offset > tag.start &&
-        offset < tag.end &&
-        (!best || tag.start > best.start)
-      ) {
-        best = { start: tag.start, pair }
-      }
+// Las etiquetas no se solapan, asi que hay a lo sumo una que contenga el offset:
+// busqueda binaria de la ultima con start < offset
+function findTag(tags, offset) {
+  let lo = 0
+  let hi = tags.length - 1
+  let found = -1
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1
+    if (tags[mid].start < offset) {
+      found = mid
+      lo = mid + 1
+    } else {
+      hi = mid - 1
     }
   }
-  return best && best.pair
+  const tag = found >= 0 ? tags[found] : undefined
+  return tag && tag.other && offset < tag.end ? tag : undefined
 }
 
 let decoration
 let lastEditor
-let cache = { key: '', pairs: [] }
+let lastKey = ''
+let timer
+let cache = { key: '', tags: [] }
 
-function getPairs(document) {
+function getTags(document) {
   const key = `${document.uri.toString()}@${document.version}`
   if (cache.key !== key) {
-    cache = { key, pairs: parseTags(document.getText()) }
+    const text = document.getText()
+    cache = {
+      key,
+      tags: text.length > CONFIG.maxChars ? [] : parseTags(text)
+    }
   }
-  return cache.pairs
+  return cache.tags
 }
 
 function update(editor) {
   if (lastEditor && lastEditor !== editor) {
     lastEditor.setDecorations(decoration, [])
+    lastKey = ''
   }
   lastEditor = editor
   if (!editor) return
 
   const { document } = editor
-  if (!CONFIG.languages.has(document.languageId)) {
-    editor.setDecorations(decoration, [])
-    return
-  }
 
-  const pairs = getPairs(document)
-  const ranges = []
-  for (const sel of editor.selections) {
-    const pair = findPair(pairs, document.offsetAt(sel.active))
-    if (!pair) continue
-    for (const tag of [pair.open, pair.close]) {
-      ranges.push(
-        new vscode.Range(
-          document.positionAt(tag.nameStart),
-          document.positionAt(tag.nameEnd)
-        )
-      )
+  // Offsets [inicio, fin] de los nombres a resaltar, de a pares
+  const offsets = []
+  if (CONFIG.languages.has(document.languageId)) {
+    const tags = getTags(document)
+    for (const sel of editor.selections) {
+      const tag = findTag(tags, document.offsetAt(sel.active))
+      if (tag) {
+        offsets.push(tag.nameStart, tag.nameEnd)
+        offsets.push(tag.other.nameStart, tag.other.nameEnd)
+      }
     }
   }
+
+  // Si nada cambio, no se vuelve a llamar a setDecorations
+  const key = `${document.version}:${offsets}`
+  if (key === lastKey) return
+  lastKey = key
+
+  const ranges = []
+  for (let i = 0; i < offsets.length; i += 2) {
+    ranges.push(
+      new vscode.Range(
+        document.positionAt(offsets[i]),
+        document.positionAt(offsets[i + 1])
+      )
+    )
+  }
   editor.setDecorations(decoration, ranges)
+}
+
+// Agrupa eventos seguidos (escribir, mantener una flecha) en una sola actualizacion
+function scheduleUpdate() {
+  clearTimeout(timer)
+  timer = setTimeout(
+    () => update(vscode.window.activeTextEditor),
+    CONFIG.debounceMs
+  )
 }
 
 /**
@@ -168,20 +198,23 @@ function activate(context) {
 
   context.subscriptions.push(
     decoration,
+    { dispose: () => clearTimeout(timer) },
     vscode.window.onDidChangeTextEditorSelection((e) => {
-      if (e.textEditor === vscode.window.activeTextEditor) update(e.textEditor)
+      if (e.textEditor === vscode.window.activeTextEditor) scheduleUpdate()
     }),
-    vscode.window.onDidChangeActiveTextEditor(update),
+    vscode.window.onDidChangeActiveTextEditor(scheduleUpdate),
     vscode.workspace.onDidChangeTextDocument((e) => {
       const editor = vscode.window.activeTextEditor
-      if (editor && e.document === editor.document) update(editor)
+      if (editor && e.document === editor.document) scheduleUpdate()
     })
   )
 
   update(vscode.window.activeTextEditor)
 }
 
-function deactivate() {}
+function deactivate() {
+  cache = { key: '', tags: [] }
+}
 
 module.exports = {
   activate,

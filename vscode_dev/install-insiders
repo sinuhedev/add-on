@@ -1,0 +1,1 @@
+cd ~/Dev/add-on/vscode_dev && zip /tmp/vscode_dev-0.0.1.vsix -r ./extension "[Content_Types].xml" extension.vsixmanifest && /opt/VSCode-linux-x64-insiders/bin/code-insiders --install-extension /tmp/vscode_dev-0.0.1.vsix 
