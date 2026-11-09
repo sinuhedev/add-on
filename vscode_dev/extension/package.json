@@ -1,0 +1,21 @@
+{
+	"name": "vscode_dev",
+	"displayName": "vscode_dev",
+	"description": "vscode_dev",
+	"version": "0.0.1",
+	"publisher": "sinuhedev",
+	"engines": {
+		"vscode": "^1.80.0"
+	},
+	"icon": "logo.png",
+	"main": "./extension.js",
+	"activationEvents": [],
+	"contributes": {
+		"commands": [
+			{
+				"command": "vscode",
+				"title": "vscode"
+			}
+		]
+	}
+}
