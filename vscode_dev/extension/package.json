@@ -11,13 +11,5 @@
   "main": "./extension.js",
   "activationEvents": [
     "*"
-  ],
-  "contributes": {
-    "commands": [
-      {
-        "command": "holaMundo.saludar",
-        "title": "Hola Mundo"
-      }
-    ]
-  }
+  ]
 }
