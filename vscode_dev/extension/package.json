@@ -1,21 +1,23 @@
 {
-	"name": "vscode_dev",
-	"displayName": "vscode_dev",
-	"description": "add-on",
-	"version": "0.0.1",
-	"publisher": "sinuhedev",
-	"engines": {
-		"vscode": "^1.80.0"
-	},
-	"icon": "logo.png",
-	"main": "./extension.js",
-	"activationEvents": [],
-	"contributes": {
-		"commands": [
-			{
-				"command": "holaMundo.saludar",
-				"title": "Hola Mundo"
-			}
-		]
-	}
+  "name": "vscode_dev",
+  "displayName": "vscode_dev",
+  "description": "add-on",
+  "version": "0.0.1",
+  "publisher": "sinuhedev",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "icon": "logo.png",
+  "main": "./extension.js",
+  "activationEvents": [
+    "*"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "holaMundo.saludar",
+        "title": "Hola Mundo"
+      }
+    ]
+  }
 }
