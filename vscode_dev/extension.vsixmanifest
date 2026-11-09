@@ -4,7 +4,7 @@
 	<Metadata>
 		<Identity Language="en-US" Id="vscode_dev" Version="0.0.1" Publisher="sinuhedev" />
 		<DisplayName>vscode_dev</DisplayName>
-		<Description xml:space="preserve">vscode_dev</Description>
+		<Description xml:space="preserve">add-on</Description>
 		<Tags></Tags>
 		<Categories></Categories>
 		<GalleryFlags>Public</GalleryFlags>

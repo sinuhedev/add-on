@@ -1,7 +1,7 @@
 {
 	"name": "vscode_dev",
 	"displayName": "vscode_dev",
-	"description": "vscode_dev",
+	"description": "add-on",
 	"version": "0.0.1",
 	"publisher": "sinuhedev",
 	"engines": {
@@ -13,8 +13,8 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "vscode",
-				"title": "vscode"
+				"command": "holaMundo.saludar",
+				"title": "Hola Mundo"
 			}
 		]
 	}
