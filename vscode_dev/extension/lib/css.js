@@ -17,7 +17,7 @@ const CUSTOM_CSS = `
   display: none !important;
 }
 
-.welcome-view, .watermark-container{
+.watermark-container{
     display: none !important;
 }
 
