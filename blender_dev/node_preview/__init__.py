@@ -70,13 +70,24 @@ def _draw_callback():
     except Exception:
         return
 
-    shader = gpu.shader.from_builtin("IMAGE")
+    shader = gpu.shader.from_builtin("IMAGE_SCENE_LINEAR_TO_REC709_SRGB")
+
     batch = batch_for_shader(
         shader,
         "TRI_FAN",
         {
-            "pos": ((x0, y0), (x1, y0), (x1, y1), (x0, y1)),
-            "texCoord": ((0, 0), (1, 0), (1, 1), (0, 1)),
+            "pos": (
+                (x0, y0),
+                (x1, y0),
+                (x1, y1),
+                (x0, y1),
+            ),
+            "texCoord": (
+                (0, 0),
+                (1, 0),
+                (1, 1),
+                (0, 1),
+            ),
         },
     )
 
