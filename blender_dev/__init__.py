@@ -1,8 +1,8 @@
 import importlib
 
-from . import hola, lock_proportions
+from . import lock_proportions, node_preview
 
-modules = (hola, lock_proportions)
+modules = (lock_proportions, node_preview)
 
 for m in modules:
     importlib.reload(m)
