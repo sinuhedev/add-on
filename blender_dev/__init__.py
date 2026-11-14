@@ -1,8 +1,8 @@
 import importlib
 
-from . import lock_proportions, node_preview
+from . import baking, lock_proportions, node_preview, undo_history
 
-modules = (lock_proportions, node_preview)
+modules = (baking, lock_proportions, node_preview, undo_history)
 
 for m in modules:
     importlib.reload(m)
